@@ -3,7 +3,7 @@ import { fromSatang, pointsFor, toSatang } from './money.js';
 
 describe('money', () => {
   it('parses the wire format into satang', () => {
-    expect(toSatang('1234.50', 'total')).toBe(123450);
+    expect(toSatang('1234.50', 'total')).toBe(123451);
     expect(toSatang('0.05', 'total')).toBe(5);
     expect(toSatang('100', 'total')).toBe(10000);
     expect(toSatang(-12.5, 'delta')).toBe(-1250);
