@@ -1,0 +1,74 @@
+---
+# Lab 08 — configure the api host Terraform created: Node.js 22 + the Docker CLI, then
+# pull the srisurart api image built and pushed in Lab 07.
+# Inventory is generated from `terraform output -json` by the pipeline (infra/Jenkinsfile).
+- name: Configure the srisurart api host
+  hosts: api
+  gather_facts: false
+  vars:
+    node_major: 22
+    api_image: "{{ lookup('ansible.builtin.env', 'API_IMAGE') }}"
+  tasks:
+    - name: Bootstrap Python so Ansible modules can run
+      ansible.builtin.raw: test -e /usr/bin/python3 || (apt-get update && apt-get install -y --no-install-recommends python3)
+      register: bootstrap
+      changed_when: "'Setting up python3' in bootstrap.stdout"
+
+    - name: Gather facts
+      ansible.builtin.setup:
+
+    - name: Install apt prerequisites
+      ansible.builtin.apt:
+        name: [ca-certificates, curl, gnupg]
+        state: present
+        update_cache: true
+
+    - name: Create the apt keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add the NodeSource signing key
+      ansible.builtin.get_url:
+        url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+        dest: /etc/apt/keyrings/nodesource.asc
+        mode: "0644"
+
+    - name: Add the NodeSource repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/nodesource.asc] https://deb.nodesource.com/node_{{ node_major }}.x nodistro main"
+        filename: nodesource
+        state: present
+
+    - name: Add the Docker signing key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add the Docker repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_facts['distribution_release'] }} stable"
+        filename: docker
+        state: present
+
+    - name: Install Node.js and the Docker CLI
+      ansible.builtin.apt:
+        name: [nodejs, docker-ce-cli]
+        state: present
+        update_cache: true
+
+    - name: Read the installed Node.js version
+      ansible.builtin.command: node --version
+      register: node_version
+      changed_when: false
+
+    - name: Pull the srisurart api image from Lab 07
+      ansible.builtin.command: docker pull {{ api_image }}
+      register: pull
+      changed_when: "'Downloaded newer image' in pull.stdout"
+
+    - name: Report what the host now runs
+      ansible.builtin.debug:
+        msg: "node {{ node_version.stdout }}; image {{ api_image }} present"

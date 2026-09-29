@@ -1,0 +1,20 @@
+# Lab 07 — schema migrations run once per deploy, as the table owner, before a colour
+# gets the new image (same rule as compose: migrations never run on api boot).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: srisurart
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: IMAGE
+          command: ["node", "dist/db/migrate.js", "up"]
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: srisurart-app, key: MIGRATE_DATABASE_URL } }

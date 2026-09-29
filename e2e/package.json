@@ -1,0 +1,12 @@
+{
+  "name": "srisurart-e2e",
+  "private": true,
+  "description": "Lab 05 — Playwright API end-to-end suite for the srisurart POS server",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.0.0"
+  }
+}

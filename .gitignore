@@ -68,3 +68,19 @@ app.*.map.json
 /server/*.tsbuildinfo
 /server/test/k6/k6-env.json
 /.tmp-nginx/
+# Lab 05 — CI reports and the Playwright suite's local output
+/server/reports/
+/server/.scannerwork/
+/e2e/node_modules/
+/e2e/playwright-report/
+/e2e/test-results/
+/e2e/results/
+/e2e/.auth/
+# Lab 06 — security reports and the SAST tool's own install
+/reports/
+/security/eslint/node_modules/
+# Lab 08 — Terraform: state lives in the LocalStack S3 backend, never in git
+**/.terraform/
+*.tfstate
+*.tfstate.*
+**/tfplan

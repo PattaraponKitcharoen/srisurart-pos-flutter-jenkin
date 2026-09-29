@@ -1,0 +1,137 @@
+// Lab 08 — Infrastructure as Code: lint → security scan → plan → human approval → apply
+// → configure with Ansible. Separate job (srisurart-infra, script path infra/Jenkinsfile):
+// its Approval stage waits for a person, which the app pipeline must never do on every push.
+
+// Runs a CLI shipped as an image against this workspace (same helper as the app Jenkinsfile).
+def runTool(String image, String args, String extra = '') {
+    sh "docker run --rm --volumes-from \$(hostname) -w \"\$WORKSPACE\" -u \$(id -u):\$(id -g) -e HOME=/tmp ${extra} ${image} ${args}"
+}
+
+// Terraform against LocalStack (on the jenkins network) with the dummy credentials below.
+def tf(String args, String redirect = '') {
+    sh "docker run --rm --volumes-from \$(hostname) -w \"\$WORKSPACE\" -u \$(id -u):\$(id -g) -e HOME=/tmp --network jenkins -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e TF_IN_AUTOMATION=1 -e TF_PLUGIN_CACHE_DIR=/home/jenkins/agent/caches/terraform ${env.TERRAFORM_IMAGE} -chdir=infra/terraform ${args} ${redirect}"
+}
+
+pipeline {
+    agent { label 'linux-build' }
+
+    parameters {
+        booleanParam(name: 'DESTROY', defaultValue: false,
+                     description: 'Lab 08 task 6: plan a destroy, approve it, apply it, and verify the state is empty')
+    }
+
+    environment {
+        TERRAFORM_IMAGE = 'hashicorp/terraform:1.16.4'
+        TFSEC_IMAGE = 'aquasec/tfsec:v1.28.14'
+        CHECKOV_IMAGE = 'bridgecrew/checkov:3.3.20'
+        ANSIBLE_IMAGE = 'srisurart-ansible:lab08'
+        // LocalStack's fixed dummy credentials — not a secret, and not valid anywhere else.
+        AWS_ACCESS_KEY_ID = 'test'
+        AWS_SECRET_ACCESS_KEY = 'test'
+        // The image Lab 07 built, scanned and pushed (last green build of lab07/bluegreen).
+        API_IMAGE = 'localhost:5001/srisurart-server:7b85117'
+    }
+
+    options {
+        // Includes the time the Approval stage waits for a person.
+        timeout(time: 30, unit: 'MINUTES')
+        // One apply at a time against the same remote state (the S3 lockfile also guards it).
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('IaC Lint & Validate') {
+            parallel {
+                stage('Terraform Validate') {
+                    steps {
+                        sh 'mkdir -p /home/jenkins/agent/caches/terraform'
+                        tf('init -backend=false -input=false')
+                        tf('validate')
+                        tf('fmt -check -recursive')
+                    }
+                }
+                stage('Ansible Lint') {
+                    steps {
+                        sh 'docker build -q -t "$ANSIBLE_IMAGE" -f infra/tools/ansible.Dockerfile infra/tools'
+                        runTool(env.ANSIBLE_IMAGE, 'ansible-lint -c infra/ansible/.ansible-lint infra/ansible/playbook.yml')
+                    }
+                }
+            }
+        }
+        stage('IaC Security Scan') {
+            steps {
+                sh 'rm -rf reports && mkdir -p reports/iac'
+                script {
+                    // Both tools always run and both reports are archived; the stage then fails
+                    // if either one found anything.
+                    def tfsec = sh(returnStatus: true, script: "docker run --rm --volumes-from \$(hostname) -w \"\$WORKSPACE\" -u \$(id -u):\$(id -g) ${env.TFSEC_IMAGE} infra/terraform --no-color --format default,json --out reports/iac/tfsec")
+                    def checkov = sh(returnStatus: true, script: "docker run --rm --volumes-from \$(hostname) -w \"\$WORKSPACE\" -u \$(id -u):\$(id -g) -e HOME=/tmp ${env.CHECKOV_IMAGE} -d infra/terraform --framework terraform --compact --quiet -o cli -o json --output-file-path console,reports/iac/checkov.json")
+                    sh 'cat reports/iac/tfsec.default.txt 2>/dev/null || true'
+                    if (tfsec != 0 || checkov != 0) {
+                        error("IaC Security Scan: findings (tfsec exit ${tfsec}, checkov exit ${checkov})")
+                    }
+                    echo 'IaC Security Scan passed: tfsec and Checkov report no findings'
+                }
+            }
+            post {
+                always { archiveArtifacts artifacts: 'reports/iac/*', allowEmptyArchive: true }
+            }
+        }
+        stage('Terraform Plan') {
+            steps {
+                tf('init -input=false -reconfigure')
+                tf("plan -input=false ${params.DESTROY ? '-destroy ' : ''}-out=tfplan")
+                tf('show -no-color tfplan', '> reports/iac/tfplan.txt')
+                // What the Approval stage shows: every resource line and the Plan: summary.
+                sh "grep -E '^  # |^Plan:|^No changes' reports/iac/tfplan.txt > reports/iac/plan-summary.txt || true"
+            }
+            post {
+                always { archiveArtifacts artifacts: 'infra/terraform/tfplan, reports/iac/tfplan.txt', allowEmptyArchive: true }
+            }
+        }
+        stage('Approval') {
+            steps {
+                script {
+                    def summary = readFile('reports/iac/plan-summary.txt').trim()
+                    echo "Plan to approve:\n${summary}"
+                    // A person must press Apply; nothing past this point runs unattended.
+                    input message: "${params.DESTROY ? 'DESTROY' : 'Apply'} this Terraform plan?\n\n${summary}", ok: 'Apply'
+                }
+            }
+        }
+        stage('Terraform Apply') {
+            steps {
+                // Applies exactly the plan that was approved, not a fresh one.
+                tf('apply -input=false tfplan')
+                tf('output')
+                tf('output -json', '> reports/iac/tf-output.json')
+            }
+        }
+        stage('Configure with Ansible') {
+            when { expression { !params.DESTROY } }
+            steps {
+                script {
+                    sh "python3 infra/ansible/inventory_from_tf.py reports/iac/tf-output.json > reports/iac/inventory.json && cat reports/iac/inventory.json"
+                    def host = sh(script: "python3 -c \"import json;print(next(iter(json.load(open('reports/iac/inventory.json'))['api']['hosts'].values()))['ansible_host'])\"", returnStdout: true).trim()
+                    // LocalStack boots no VM for the instance, so a container stands in for it
+                    // (named after the instance id), with the Docker socket for `docker pull`.
+                    sh "docker rm -f ${host} >/dev/null 2>&1 || true"
+                    sh "docker run -d --name ${host} --label srisurart.lab08=host --network jenkins -v /var/run/docker.sock:/var/run/docker.sock ubuntu:24.04 sleep infinity"
+                }
+                runTool(env.ANSIBLE_IMAGE, 'ansible-playbook -i reports/iac/inventory.json infra/ansible/playbook.yml', '--group-add 0 -e API_IMAGE')
+            }
+            post {
+                always { archiveArtifacts artifacts: 'reports/iac/tf-output.json, reports/iac/inventory.json', allowEmptyArchive: true }
+            }
+        }
+        stage('Verify Destroy') {
+            when { expression { params.DESTROY } }
+            steps {
+                tf('state list', '> reports/iac/state-after-destroy.txt')
+                sh 'echo "resources in state after destroy: $(wc -l < reports/iac/state-after-destroy.txt)"; test ! -s reports/iac/state-after-destroy.txt'
+                sh 'docker rm -f $(docker ps -aq --filter label=srisurart.lab08=host) 2>/dev/null || true'
+                echo 'Destroy verified: the remote state manages zero resources'
+            }
+        }
+    }
+}
