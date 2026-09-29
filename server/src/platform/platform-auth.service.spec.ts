@@ -81,10 +81,14 @@ describe('PlatformAuthService token TTL', () => {
     const { token } = await service.login('root', 'right-password-123', '127.0.0.1');
     const payload = verifyJwt(token, secret);
 
+    const after = Math.floor(Date.now() / 1000);
+
     expect(payload).not.toBeNull();
-    const ttl = (payload!.exp as number) - before;
-    expect(ttl).toBeGreaterThan(3595);
-    expect(ttl).toBeLessThanOrEqual(3600);
+    // exp is stamped somewhere inside login(), which spends ~1 s in argon2 verify: bound it
+    // by the clock on both sides instead of `exp - before`, which reads 3601 whenever that
+    // second ticks over mid-login (seen on a CPU-limited Kubernetes build pod, Lab 09).
+    expect(payload!.exp as number).toBeGreaterThanOrEqual(before + 3600);
+    expect(payload!.exp as number).toBeLessThanOrEqual(after + 3600);
   });
 });
 
