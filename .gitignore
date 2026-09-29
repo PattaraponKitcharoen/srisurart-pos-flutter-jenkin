@@ -79,3 +79,8 @@ app.*.map.json
 # Lab 06 — security reports and the SAST tool's own install
 /reports/
 /security/eslint/node_modules/
+# Lab 08 — Terraform: state lives in the LocalStack S3 backend, never in git
+**/.terraform/
+*.tfstate
+*.tfstate.*
+**/tfplan

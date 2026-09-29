@@ -1,0 +1,2 @@
+# Lab 08 — lint the playbook with the strictest built-in profile.
+profile: production
