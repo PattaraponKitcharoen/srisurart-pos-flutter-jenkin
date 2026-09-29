@@ -1,0 +1,27 @@
+# Lab 06 — Gitleaks config: the default rules, minus findings reviewed as NOT secrets.
+# Every allowlist names why; anything new outside these paths still fails the build.
+title = "srisurart-pos gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Test fixtures: hard-coded passwords/tokens that exist only to exercise auth code"
+paths = [
+  '''(^|/)test/''',
+  '''\.spec\.ts$''',
+  '''\.e2e-spec\.ts$''',
+  '''_test\.dart$''',
+]
+
+[[allowlists]]
+description = "Public dev-only placeholders (the app refuses them unless ALLOW_DEV_SECRETS=true, #410)"
+paths = ['''^server/\.env\.example$''']
+
+[[allowlists]]
+description = "Docs: truncated example tokens and sample Idempotency-Key headers"
+paths = ['''^docs/''']
+
+[[allowlists]]
+description = "The temporary-password alphabet constant (common/password.ts), not a key"
+regexes = ['''^ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789$''']

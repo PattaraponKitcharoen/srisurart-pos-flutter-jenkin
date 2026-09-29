@@ -1,0 +1,12 @@
+{
+  "name": "srisurart-sast-eslint",
+  "private": true,
+  "description": "Lab 06 — ESLint with eslint-plugin-security, SARIF output. Kept apart from server/ (which lints with oxlint) so the SAST tooling never changes the app's dependency tree.",
+  "type": "module",
+  "devDependencies": {
+    "@microsoft/eslint-formatter-sarif": "^3.1.0",
+    "eslint": "^9.36.0",
+    "eslint-plugin-security": "^3.0.1",
+    "typescript-eslint": "^8.44.0"
+  }
+}

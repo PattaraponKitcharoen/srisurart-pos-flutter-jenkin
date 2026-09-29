@@ -76,3 +76,6 @@ app.*.map.json
 /e2e/test-results/
 /e2e/results/
 /e2e/.auth/
+# Lab 06 — security reports and the SAST tool's own install
+/reports/
+/security/eslint/node_modules/
