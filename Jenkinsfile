@@ -322,6 +322,7 @@ spec:
                     // .env.example's public dev-only values, as the Lab 05 compose file did.
                     container('postgres') {
                         sh '''
+                            set +x  # passwords below: keep them out of the log, even dev-only ones
                             set -a; . server/.env.example; set +a
                             mkdir -p /tmp/pg && chown postgres /tmp/pg
                             printf '%s' "$POSTGRES_PASSWORD" > /tmp/pg/pw && chown postgres /tmp/pg/pw
@@ -338,6 +339,7 @@ spec:
                     }
                     container('redis') {
                         sh '''
+                            set +x  # passwords below: keep them out of the log, even dev-only ones
                             set -a; . server/.env.example; set +a
                             JENKINS_NODE_COOKIE=dontKillMe redis-server --port 6379 --requirepass "$REDIS_PASSWORD" --save '' --daemonize yes
                             JENKINS_NODE_COOKIE=dontKillMe redis-server --port 6380 --requirepass "$REDIS_PASSWORD" --maxmemory-policy noeviction --daemonize yes
@@ -345,6 +347,7 @@ spec:
                     }
                     container('api') {
                         sh '''
+                            set +x  # passwords below: keep them out of the log, even dev-only ones
                             set -a; . server/.env.example; set +a
                             export INSTANCE_ID=api-e2e DB_POOL_SIZE=5 LOG_LEVEL=warn
                             LOG="$WORKSPACE/reports/e2e/api.log"
