@@ -27,3 +27,9 @@ variable "app_port" {
   type        = number
   default     = 3000
 }
+
+variable "admin_cidr" {
+  description = "The one host allowed to SSH in (Ansible runs from there)."
+  type        = string
+  default     = "10.0.0.10/32"
+}
