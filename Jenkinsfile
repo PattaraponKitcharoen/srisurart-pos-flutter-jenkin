@@ -88,9 +88,11 @@ pipeline {
                         stage('Unit Test') {
                             steps {
                                 script { env.CURRENT_STAGE = env.STAGE_NAME }
-                                // Coverage is judged by the Quality Gate, not here.
+                                // Coverage is judged by the Quality Gate, not here. --testTimeout: the
+                                // argon2 specs are slow by design and blew vitest's 5 s default when two
+                                // builds shared the kind node's CPU (main #2 and lab10/capstone #3).
                                 dir('server') {
-                                    sh 'corepack pnpm exec vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
+                                    sh 'corepack pnpm exec vitest run --coverage --testTimeout=30000 --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
                                 }
                             }
                             post {
