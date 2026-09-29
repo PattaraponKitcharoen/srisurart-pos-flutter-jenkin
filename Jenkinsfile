@@ -49,6 +49,24 @@ pipeline {
                 dir('server') { sh 'corepack pnpm test' }
             }
         }
+        // Lab 04: every branch and PR runs the same Jenkinsfile; `when { branch }` decides
+        // which deploy stage (if any) a given run is allowed to reach.
+        stage('Deploy — Staging') {
+            when { branch 'develop' }
+            steps {
+                script { env.CURRENT_STAGE = env.STAGE_NAME }
+                sh 'echo deploying to staging...'
+            }
+        }
+        stage('Deploy — Production') {
+            when { branch 'main' }
+            // Note: the pipeline-wide 10-minute timeout also covers this wait.
+            input { message 'Deploy to production?' }
+            steps {
+                script { env.CURRENT_STAGE = env.STAGE_NAME }
+                sh 'echo deploying to production...'
+            }
+        }
     }
 
     post {
