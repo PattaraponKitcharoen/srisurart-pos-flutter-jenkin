@@ -97,8 +97,10 @@ pipeline {
                                 // Coverage is judged by the Quality Gate, not here. --testTimeout: the
                                 // argon2 specs are slow by design and blew vitest's 5 s default when two
                                 // builds shared the kind node's CPU (main #2 and lab10/capstone #3).
+                                // --maxWorkers: vitest sizes its pool from the NODE's 12 CPUs, and 12
+                                // coverage workers next to tsc and ESLint OOM-killed this container (main #4).
                                 dir('server') {
-                                    sh 'corepack pnpm exec vitest run --coverage --testTimeout=30000 --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
+                                    sh 'corepack pnpm exec vitest run --coverage --maxWorkers=4 --testTimeout=30000 --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
                                 }
                             }
                             post {

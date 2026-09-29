@@ -30,8 +30,8 @@ spec:
         - {name: HOME, value: /tmp}
         - {name: COREPACK_ENABLE_DOWNLOAD_PROMPT, value: "0"}
       resources:
-        requests: {cpu: "2", memory: 1Gi}   # lint, unit, ESLint and audit run here in parallel
-        limits: {memory: 3Gi}
+        requests: {cpu: "2", memory: 2Gi}   # lint, unit, ESLint and audit run here in parallel
+        limits: {memory: 4Gi}
     - name: gitleaks
       image: zricethezav/gitleaks:v8.30.1
       command: [cat]
