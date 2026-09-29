@@ -66,10 +66,12 @@ pipeline {
                 stage('Checks') {
                     // Independent, so they run side by side; the first real failure stops the rest.
                     failFast true
+                    // A branch records its name only if it is the FIRST to fail: set at the start,
+                    // the six branches would overwrite each other, and the ones failFast interrupts
+                    // also end in failure, so the e-mail would name the wrong stage.
                     parallel {
                         stage('Secrets') {
                             steps {
-                                script { env.CURRENT_STAGE = env.STAGE_NAME }
                                 // Full history of the commit being built: a secret committed and later
                                 // deleted is still caught. --log-opts=HEAD, because this checkout also
                                 // fetches every other branch and gitleaks' default is `git log --all`.
@@ -78,16 +80,20 @@ pipeline {
                                     sh 'gitleaks git --log-opts=HEAD --config .gitleaks.toml --redact --no-banner --report-format json --report-path reports/security/gitleaks-report.json .'
                                 }
                             }
+                            post {
+                                failure { script { if (!env.CHECK_FAILED) { env.CHECK_FAILED = env.STAGE_NAME; env.CURRENT_STAGE = env.STAGE_NAME } } }
+                            }
                         }
                         stage('Lint') {
                             steps {
-                                script { env.CURRENT_STAGE = env.STAGE_NAME }
                                 dir('server') { sh 'corepack pnpm lint && corepack pnpm typecheck' }
+                            }
+                            post {
+                                failure { script { if (!env.CHECK_FAILED) { env.CHECK_FAILED = env.STAGE_NAME; env.CURRENT_STAGE = env.STAGE_NAME } } }
                             }
                         }
                         stage('Unit Test') {
                             steps {
-                                script { env.CURRENT_STAGE = env.STAGE_NAME }
                                 // Coverage is judged by the Quality Gate, not here. --testTimeout: the
                                 // argon2 specs are slow by design and blew vitest's 5 s default when two
                                 // builds shared the kind node's CPU (main #2 and lab10/capstone #3).
@@ -96,6 +102,7 @@ pipeline {
                                 }
                             }
                             post {
+                                failure { script { if (!env.CHECK_FAILED) { env.CHECK_FAILED = env.STAGE_NAME; env.CURRENT_STAGE = env.STAGE_NAME } } }
                                 always {
                                     junit testResults: 'server/reports/junit.xml', allowEmptyResults: true
                                     recordCoverage(
@@ -108,7 +115,6 @@ pipeline {
                         }
                         stage('SAST — ESLint security') {
                             steps {
-                                script { env.CURRENT_STAGE = env.STAGE_NAME }
                                 // eslint-plugin-security lives in security/eslint/ so the app keeps
                                 // oxlint and its own dependency tree. Warnings are reported, not blocking.
                                 sh 'cd security/eslint && npm ci --no-audit --no-fund'
@@ -116,19 +122,23 @@ pipeline {
                                     sh '../security/eslint/node_modules/.bin/eslint -c ../security/eslint/eslint.config.js -f ../security/eslint/node_modules/@microsoft/eslint-formatter-sarif/sarif.js -o ../reports/security/eslint-security.sarif src'
                                 }
                             }
+                            post {
+                                failure { script { if (!env.CHECK_FAILED) { env.CHECK_FAILED = env.STAGE_NAME; env.CURRENT_STAGE = env.STAGE_NAME } } }
+                            }
                         }
                         stage('SAST — Semgrep') {
                             steps {
-                                script { env.CURRENT_STAGE = env.STAGE_NAME }
                                 container('semgrep') {
                                     sh 'semgrep scan --config p/owasp-top-ten --config p/nodejs --metrics=off --sarif --output reports/security/semgrep.sarif server/src'
                                 }
+                            }
+                            post {
+                                failure { script { if (!env.CHECK_FAILED) { env.CHECK_FAILED = env.STAGE_NAME; env.CURRENT_STAGE = env.STAGE_NAME } } }
                             }
                         }
                         stage('SCA — pnpm audit') {
                             steps {
                                 script {
-                                    env.CURRENT_STAGE = env.STAGE_NAME
                                     // pnpm audit exits non-zero on ANY finding, so the verdict comes
                                     // from the JSON: fail on critical, warn below that.
                                     sh 'cd server && corepack pnpm audit --json > ../reports/security/audit.json || true'
@@ -150,6 +160,9 @@ pipeline {
                                         echo "SCA passed with 0 critical vulnerabilities (warnings allowed: ${counts[2]} moderate, ${counts[3]} low)"
                                     }
                                 }
+                            }
+                            post {
+                                failure { script { if (!env.CHECK_FAILED) { env.CHECK_FAILED = env.STAGE_NAME; env.CURRENT_STAGE = env.STAGE_NAME } } }
                             }
                         }
                     }
