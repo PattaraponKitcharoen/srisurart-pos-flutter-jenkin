@@ -59,7 +59,12 @@ pipeline {
             }
         }
         stage('Deploy — Production') {
-            when { branch 'main' }
+            // beforeInput: without it Declarative asks the input question BEFORE evaluating
+            // `when`, so develop/feature/PR builds would also stop and wait for approval.
+            when {
+                beforeInput true
+                branch 'main'
+            }
             // Note: the pipeline-wide 10-minute timeout also covers this wait.
             input { message 'Deploy to production?' }
             steps {
