@@ -15,7 +15,9 @@ groups:
         expr: max(jenkins_job_building_duration{quantile="0.95"})
 
       - record: jenkins:build_success_ratio:1h
-        expr: sum(increase(jenkins_runs_success_total[1h])) / clamp_min(sum(increase(jenkins_runs_total_total[1h])), 1)
+        expr: >
+          sum(increase(jenkins_runs_success_total[1h]))
+          / clamp_min(sum(increase(jenkins_runs_total_total[1h])), 1)
 
       # Queue wait > 2 minutes, sustained for 5 minutes: at least one item has been ready
       # to run (buildable = waiting only for an executor/pod) at EVERY scrape of the last
@@ -30,7 +32,10 @@ groups:
           severity: warning
         annotations:
           summary: "Jenkins build queue backlog exceeds 2 minutes"
-          description: "{{ $value }} item(s) have waited for an executor for over 2 minutes, for 5 minutes straight: the build farm lacks capacity (check the Kubernetes cloud's concurrency limit)."
+          description: >
+            {{ $value }} item(s) have waited for an executor for over 2 minutes, for 5
+            minutes straight: the build farm lacks capacity (check the Kubernetes
+            cloud's concurrency limit).
 
       - alert: JenkinsBuildLatencySLOBurn
         expr: avg_over_time(jenkins:build_duration_seconds:p95[7d]) > 360
