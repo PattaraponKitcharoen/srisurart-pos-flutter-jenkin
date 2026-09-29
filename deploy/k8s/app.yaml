@@ -1,0 +1,90 @@
+# Lab 07 — blue/green api. Two Deployments that differ only by colour; the `srisurart`
+# Service picks ONE colour through its selector, so a switch (or a rollback) is a label
+# change, never a redeploy. srisurart-blue / srisurart-green Services reach one colour
+# directly, for the smoke test that runs BEFORE traffic moves.
+# IMAGE is substituted by deploy/k8s/bootstrap.sh on first creation only; after that
+# the pipeline changes images with `kubectl set image`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: srisurart-blue
+  namespace: srisurart
+  labels: { app: srisurart, color: blue }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: srisurart, color: blue } }
+  template:
+    metadata: { labels: { app: srisurart, color: blue } }
+    spec:
+      containers:
+        - name: app
+          image: IMAGE
+          env:
+            # config.ts loads the JWT keys only when INSTANCE_ID starts with "api".
+            - { name: INSTANCE_ID, value: api-k8s }
+            - { name: DB_POOL_SIZE, value: "5" }
+            - { name: LOG_LEVEL, value: warn }
+          envFrom:
+            - secretRef: { name: srisurart-app }
+          ports: [{ containerPort: 3000 }]
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 3000 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health/live, port: 3000 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources: { limits: { memory: 256Mi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: srisurart-green
+  namespace: srisurart
+  labels: { app: srisurart, color: green }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: srisurart, color: green } }
+  template:
+    metadata: { labels: { app: srisurart, color: green } }
+    spec:
+      containers:
+        - name: app
+          image: IMAGE
+          env:
+            # config.ts loads the JWT keys only when INSTANCE_ID starts with "api".
+            - { name: INSTANCE_ID, value: api-k8s }
+            - { name: DB_POOL_SIZE, value: "5" }
+            - { name: LOG_LEVEL, value: warn }
+          envFrom:
+            - secretRef: { name: srisurart-app }
+          ports: [{ containerPort: 3000 }]
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 3000 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health/live, port: 3000 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources: { limits: { memory: 256Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: srisurart, namespace: srisurart }
+spec:
+  selector: { app: srisurart, color: blue }
+  ports: [{ port: 3000, targetPort: 3000 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: srisurart-blue, namespace: srisurart }
+spec:
+  selector: { app: srisurart, color: blue }
+  ports: [{ port: 3000, targetPort: 3000 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: srisurart-green, namespace: srisurart }
+spec:
+  selector: { app: srisurart, color: green }
+  ports: [{ port: 3000, targetPort: 3000 }]

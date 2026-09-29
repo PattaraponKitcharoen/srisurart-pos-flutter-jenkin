@@ -1,0 +1,113 @@
+# Lab 07 — datastores shared by the blue and green api Deployments (namespace srisurart).
+# Lab-sized, not production: one replica each, emptyDir storage (the kind cluster is
+# throwaway). Passwords come from the srisurart-app Secret made by make-secret.mjs.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: srisurart
+data:
+  # Same role as server/docker/postgres/init/01-app-role.sh: RLS is only real when the
+  # app connects as a role that is neither superuser nor table owner.
+  01-app-role.sh: |
+    #!/bin/sh
+    set -e
+    psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<EOSQL
+    CREATE ROLE pos_app LOGIN PASSWORD '${POS_APP_PASSWORD}'
+      NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+    GRANT CONNECT ON DATABASE "${POSTGRES_DB}" TO pos_app;
+    EOSQL
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: srisurart
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata: { labels: { app: postgres } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - { name: POSTGRES_DB, value: pos }
+            - { name: POSTGRES_USER, value: postgres }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: srisurart-app, key: POSTGRES_PASSWORD } }
+            - name: POS_APP_PASSWORD
+              valueFrom: { secretKeyRef: { name: srisurart-app, key: POS_APP_PASSWORD } }
+          ports: [{ containerPort: 5432 }]
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "postgres", "-d", "pos"] }
+            periodSeconds: 3
+          resources: { limits: { memory: 256Mi } }
+          volumeMounts:
+            - { name: init, mountPath: /docker-entrypoint-initdb.d }
+            - { name: data, mountPath: /var/lib/postgresql/data }
+      volumes:
+        - name: init
+          configMap: { name: postgres-init }
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata: { name: postgres, namespace: srisurart }
+spec:
+  selector: { app: postgres }
+  ports: [{ port: 5432 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: redis-cache, namespace: srisurart }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: redis-cache } }
+  template:
+    metadata: { labels: { app: redis-cache } }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ["sh", "-c", "exec redis-server --requirepass \"$REDIS_PASSWORD\" --save '' --maxmemory 48mb --maxmemory-policy allkeys-lru"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: srisurart-app, key: REDIS_PASSWORD } }
+          ports: [{ containerPort: 6379 }]
+          resources: { limits: { memory: 64Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: redis-cache, namespace: srisurart }
+spec:
+  selector: { app: redis-cache }
+  ports: [{ port: 6379 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: redis-queue, namespace: srisurart }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: redis-queue } }
+  template:
+    metadata: { labels: { app: redis-queue } }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ["sh", "-c", "exec redis-server --requirepass \"$REDIS_PASSWORD\" --maxmemory-policy noeviction"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: srisurart-app, key: REDIS_PASSWORD } }
+          ports: [{ containerPort: 6379 }]
+          resources: { limits: { memory: 64Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: redis-queue, namespace: srisurart }
+spec:
+  selector: { app: redis-queue }
+  ports: [{ port: 6379 }]

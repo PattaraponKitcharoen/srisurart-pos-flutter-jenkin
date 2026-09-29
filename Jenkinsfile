@@ -1,6 +1,7 @@
 // Lab 03 — first declarative pipeline for the srisurart POS server (NestJS, server/).
 // Lab 05 — three gates: unit tests + coverage, SonarQube quality gate, Playwright E2E.
 // Lab 06 — shift-left security chain BEFORE the build: secrets → SAST → SCA → SBOM → policy.
+// Lab 07 — immutable image → Trivy gate → local registry → blue/green on kind, auto-rollback.
 
 // Runs a CLI that ships as an image (gitleaks, semgrep, syft, trivy, opa ...) against this
 // workspace. The agent is itself a container: --volumes-from shares its workspace volume with
@@ -32,6 +33,9 @@ pipeline {
         TRIVY_IMAGE = 'aquasec/trivy:0.74.0'
         OPA_IMAGE = 'openpolicyagent/opa:1.21.0'
         SBOM = 'reports/sbom/srisurart-pos-server.cdx.json'
+        // Lab 07: the kind cluster's registry, as the Docker daemon (push) and kind (pull) see it.
+        REGISTRY = 'localhost:5001'
+        K8S_NS = 'srisurart'
     }
 
     options {
@@ -39,6 +43,12 @@ pipeline {
         // (Lab 03 had 10): SonarQube + the api image for E2E add ~5, the Lab 06 security
         // chain ~3 more. The Quality Gate stage has its own, tighter 5-minute bound.
         timeout(time: 30, unit: 'MINUTES')
+    }
+
+    parameters {
+        // Lab 07 demo switch: deploy a deliberately broken image to prove the rollback fires.
+        booleanParam(name: 'INJECT_BROKEN_IMAGE', defaultValue: false,
+                     description: 'Lab 07: deploy deploy/k8s/broken.Dockerfile (exits at start) instead of the real image')
     }
 
     stages {
@@ -265,6 +275,95 @@ pipeline {
                     // Plain `down`: every datastore is on tmpfs, so nothing is left behind
                     // (and `down -v` is never used on a shared Docker daemon).
                     sh 'docker compose -p "$E2E_PROJECT" --env-file server/.env.example -f e2e/docker-compose.e2e.yml down --remove-orphans || true'
+                }
+            }
+        }
+        stage('Build Image') {
+            steps {
+                script {
+                    env.CURRENT_STAGE = env.STAGE_NAME
+                    // Immutable tag = the commit, never `latest`: what runs in the cluster can
+                    // always be traced back to exactly one commit.
+                    def tag = env.GIT_COMMIT.substring(0, 7)
+                    env.IMAGE = "${env.REGISTRY}/srisurart-server:${tag}"
+                    sh 'docker build -q -t "$IMAGE" server'
+                    if (params.INJECT_BROKEN_IMAGE) {
+                        env.IMAGE = "${env.REGISTRY}/srisurart-server:${tag}-broken"
+                        sh "docker build -q --build-arg BASE=${env.REGISTRY}/srisurart-server:${tag} -t \"\$IMAGE\" -f deploy/k8s/broken.Dockerfile deploy/k8s"
+                    }
+                    echo "Built ${env.IMAGE}"
+                }
+            }
+        }
+        stage('Container Scan') {
+            steps {
+                script { env.CURRENT_STAGE = env.STAGE_NAME }
+                sh 'mkdir -p reports/image'
+                // The image is scanned BEFORE it is pushed, so a vulnerable build never reaches
+                // the registry. Trivy reads it from the Docker daemon (socket shared with the
+                // agent; --group-add 0 lets the agent's uid use it).
+                runTool(env.TRIVY_IMAGE, "image -q --cache-dir /home/jenkins/agent/caches/trivy --severity HIGH,CRITICAL --format sarif --output reports/image/trivy-image.sarif ${env.IMAGE}", '--group-add 0')
+                runTool(env.TRIVY_IMAGE, "image -q --cache-dir /home/jenkins/agent/caches/trivy --severity HIGH,CRITICAL --exit-code 1 ${env.IMAGE}", '--group-add 0')
+            }
+            post {
+                always { archiveArtifacts artifacts: 'reports/image/trivy-image.sarif', allowEmptyArchive: true }
+            }
+        }
+        stage('Push Image') {
+            steps {
+                script { env.CURRENT_STAGE = env.STAGE_NAME }
+                sh 'docker push -q "$IMAGE"'
+            }
+        }
+        stage('Blue/Green Deploy') {
+            when { not { changeRequest() } }
+            steps {
+                withCredentials([file(credentialsId: 'kind-kubeconfig', variable: 'KUBECONFIG')]) {
+                    script {
+                        env.CURRENT_STAGE = env.STAGE_NAME
+                        sh 'mkdir -p reports/k8s && sh deploy/k8s/bootstrap.sh "$IMAGE"'
+                        def current = sh(
+                            script: "kubectl -n ${env.K8S_NS} get svc srisurart -o jsonpath='{.spec.selector.color}'",
+                            returnStdout: true
+                        ).trim()
+                        def next = current == 'blue' ? 'green' : 'blue'
+                        // Remembered for post { failure }, which runs outside this script block.
+                        env.BG_CURRENT = current
+                        env.BG_NEXT = next
+                        echo "Service srisurart serves ${current}; deploying ${env.IMAGE} to ${next}"
+                        sh "kubectl -n ${env.K8S_NS} get svc srisurart -o yaml | tee reports/k8s/svc-before.yaml"
+                        sh "kubectl -n ${env.K8S_NS} set image deployment/srisurart-${next} app=${env.IMAGE}"
+                        sh "kubectl -n ${env.K8S_NS} rollout status deployment/srisurart-${next} --timeout=120s"
+                        // Smoke test the new colour directly, through its own Service, BEFORE any
+                        // user traffic moves. `wait` on the pod phase gives a reliable exit code.
+                        def smoke = "smoke-${env.BUILD_NUMBER}-${next}"
+                        sh "kubectl -n ${env.K8S_NS} delete pod ${smoke} --ignore-not-found"
+                        sh "kubectl -n ${env.K8S_NS} run ${smoke} --restart=Never --image=curlimages/curl:8.16.0 -- curl -sf --max-time 10 http://srisurart-${next}:3000/health/ready"
+                        def ok = sh(script: "kubectl -n ${env.K8S_NS} wait --for=jsonpath='{.status.phase}'=Succeeded pod/${smoke} --timeout=60s", returnStatus: true)
+                        sh "kubectl -n ${env.K8S_NS} logs ${smoke} || true; kubectl -n ${env.K8S_NS} delete pod ${smoke} --ignore-not-found"
+                        if (ok != 0) { error("Smoke test of srisurart-${next} failed") }
+                        sh "kubectl -n ${env.K8S_NS} patch svc srisurart -p '{\"spec\":{\"selector\":{\"color\":\"${next}\"}}}'"
+                        sh "kubectl -n ${env.K8S_NS} get svc srisurart -o yaml | tee reports/k8s/svc-after.yaml"
+                        echo "Switched traffic from ${current} to ${next}"
+                    }
+                }
+            }
+            post {
+                always { archiveArtifacts artifacts: 'reports/k8s/*.yaml', allowEmptyArchive: true }
+                failure {
+                    // Automatic rollback: point the Service back at the colour that was serving,
+                    // and return the failed colour to its previous (working) ReplicaSet.
+                    withCredentials([file(credentialsId: 'kind-kubeconfig', variable: 'KUBECONFIG')]) {
+                        script {
+                            if (env.BG_CURRENT) {
+                                echo "ROLLBACK: deploy to ${env.BG_NEXT} failed; keeping traffic on ${env.BG_CURRENT}"
+                                sh "kubectl -n ${env.K8S_NS} patch svc srisurart -p '{\"spec\":{\"selector\":{\"color\":\"${env.BG_CURRENT}\"}}}'"
+                                sh "kubectl -n ${env.K8S_NS} rollout undo deployment/srisurart-${env.BG_NEXT}"
+                                sh "kubectl -n ${env.K8S_NS} rollout status deployment/srisurart-${env.BG_NEXT} --timeout=120s || true"
+                                sh "kubectl -n ${env.K8S_NS} get svc srisurart -o jsonpath='{.spec.selector}'; echo"
+                            }
+                        }
+                    }
                 }
             }
         }
