@@ -68,3 +68,11 @@ app.*.map.json
 /server/*.tsbuildinfo
 /server/test/k6/k6-env.json
 /.tmp-nginx/
+# Lab 05 — CI reports and the Playwright suite's local output
+/server/reports/
+/server/.scannerwork/
+/e2e/node_modules/
+/e2e/playwright-report/
+/e2e/test-results/
+/e2e/results/
+/e2e/.auth/
