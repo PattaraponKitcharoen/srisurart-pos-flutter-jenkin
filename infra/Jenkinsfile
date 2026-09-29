@@ -65,8 +65,8 @@ pipeline {
                     // Both tools always run and both reports are archived; the stage then fails
                     // if either one found anything.
                     def tfsec = sh(returnStatus: true, script: "docker run --rm --volumes-from \$(hostname) -w \"\$WORKSPACE\" -u \$(id -u):\$(id -g) ${env.TFSEC_IMAGE} infra/terraform --no-color --format default,json --out reports/iac/tfsec")
-                    def checkov = sh(returnStatus: true, script: "docker run --rm --volumes-from \$(hostname) -w \"\$WORKSPACE\" -u \$(id -u):\$(id -g) -e HOME=/tmp ${env.CHECKOV_IMAGE} -d infra/terraform --framework terraform --compact --quiet -o cli -o json --output-file-path console,reports/iac")
-                    sh 'cat reports/iac/tfsec.default 2>/dev/null || true'
+                    def checkov = sh(returnStatus: true, script: "docker run --rm --volumes-from \$(hostname) -w \"\$WORKSPACE\" -u \$(id -u):\$(id -g) -e HOME=/tmp ${env.CHECKOV_IMAGE} -d infra/terraform --framework terraform --compact --quiet -o cli -o json --output-file-path console,reports/iac/checkov.json")
+                    sh 'cat reports/iac/tfsec.default.txt 2>/dev/null || true'
                     if (tfsec != 0 || checkov != 0) {
                         error("IaC Security Scan: findings (tfsec exit ${tfsec}, checkov exit ${checkov})")
                     }
