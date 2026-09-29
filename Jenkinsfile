@@ -1,20 +1,46 @@
 // Lab 03 — first declarative pipeline for the srisurart POS server (NestJS, server/).
+// Lab 09 — the same stages on an ephemeral Kubernetes pod instead of the static agent.
 pipeline {
-    // Build inside a throwaway Node container that runs on the linux-build agent.
+    // One fresh pod per run in the kind cluster (cloud "kind-srisurart", namespace
+    // jenkins-agents), deleted when the run ends: nothing is left between builds and
+    // capacity is the cloud's concurrency limit, not a fixed executor count.
     // node:22 (not 20) because server/package.json requires node >= 22; bookworm-slim
     // (glibc) instead of alpine (musl) so argon2's prebuilt native binary loads.
     agent {
-        docker {
-            image 'node:22-bookworm-slim'
-            label 'linux-build'
+        kubernetes {
+            cloud 'kind-srisurart'
+            defaultContainer 'node'
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  securityContext:
+    runAsUser: 1000   # the image's `node` user, same uid as the jnlp container
+    runAsGroup: 1000
+    fsGroup: 1000
+  containers:
+  - name: node
+    image: node:22-bookworm-slim
+    command: ['cat']
+    tty: true
+    resources:
+      requests: {cpu: 500m, memory: 512Mi}
+      limits: {memory: 1536Mi}
+'''
         }
+    }
+
+    parameters {
+        // Lab 09 load test: builds queued with identical parameters are merged into one
+        // queue item, so each of the 10 concurrent runs gets a distinct LOAD_ID.
+        string(name: 'LOAD_ID', defaultValue: '', description: 'Lab 09: tag for load-test runs (leave empty)')
     }
 
     environment {
         APP_NAME = 'srisurart-pos-server'
         NODE_ENV = 'test'
-        // The container runs as the agent's uid, which has no home directory in the
-        // node image; corepack and pnpm need a writable HOME for their caches.
+        // corepack and pnpm need a writable HOME for their caches; /tmp is writable
+        // whatever uid the container runs as.
         HOME = '/tmp'
         COREPACK_ENABLE_DOWNLOAD_PROMPT = '0'
     }
