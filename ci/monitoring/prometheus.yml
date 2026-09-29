@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # Jenkins Prometheus metrics plugin (endpoint left unauthenticated in its global config;
+  # only reachable on the docker network `jenkins` and on loopback).
+  - job_name: jenkins
+    metrics_path: /prometheus/
+    static_configs:
+      - targets: ['jenkins:8080']
