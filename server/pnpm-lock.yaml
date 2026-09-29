@@ -13,13 +13,13 @@ importers:
     dependencies:
       '@bull-board/api':
         specifier: ^9.8.0
-        version: 9.8.0(@bull-board/ui@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0)))(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))
+        version: 9.8.0(@bull-board/ui@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0)))(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))
       '@bull-board/express':
         specifier: ^9.8.0
-        version: 9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))
+        version: 9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))
       '@nestjs/bullmq':
         specifier: ^12.0.0
-        version: 12.0.0(@nestjs/common@12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.1)(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))
+        version: 12.0.0(@nestjs/common@12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.1)(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))
       '@nestjs/common':
         specifier: ^12.0.1
         version: 12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -34,7 +34,7 @@ importers:
         version: 0.45.1
       bullmq:
         specifier: ^6.3.4
-        version: 6.3.4(ioredis@6.0.0)(pg@7.1.0)
+        version: 6.3.4(ioredis@6.0.0)(pg@8.23.0)
       express:
         specifier: ^5.2.1
         version: 5.2.1
@@ -48,8 +48,8 @@ importers:
         specifier: ^9.0.3
         version: 9.0.3
       pg:
-        specifier: ^7.1.0
-        version: 7.1.0
+        specifier: ^8.23.0
+        version: 8.23.0
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -67,7 +67,7 @@ importers:
         version: 7.8.2
       typeorm:
         specifier: ^1.1.1
-        version: 1.1.1(ioredis@6.0.0)(pg@7.1.0)
+        version: 1.1.1(ioredis@6.0.0)(pg@8.23.0)
     devDependencies:
       '@nestjs/cli':
         specifier: ^12.0.0
@@ -1073,9 +1073,6 @@ packages:
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
 
-  buffer-writer@1.0.1:
-    resolution: {integrity: sha512-I5M7UuSeDn5aQR2BSH2+270w9qdd2Rd5LB/XhTcIRdSmeLueMNlY3BaMoHtoASmjEQf/NOAqMIZaoAMSpomW6w==}
-
   bullmq@6.3.4:
     resolution: {integrity: sha512-DpilB5sayCB8huCp4YuzVhJjxB4ieHidzu+GPgbcjPi3kQv0gdLoLnk+I+mMACDQ88rTbSiT+B4crmhWFGL9GA==}
     engines: {node: '>=14.17.0'}
@@ -1783,9 +1780,6 @@ packages:
       vite-plus:
         optional: true
 
-  packet-reader@0.3.1:
-    resolution: {integrity: sha512-5hN3f+rVT3PRjNI+GYUKTolUo5Yhypmo97D5+6On6L4bVhnno5wzGTT3agB9u7llRfw6pEV4I1/obWSXTKDY1w==}
-
   parseurl@1.3.3:
     resolution: {integrity: sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==}
     engines: {node: '>= 0.8'}
@@ -1800,31 +1794,36 @@ packages:
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
 
-  pg-connection-string@0.1.3:
-    resolution: {integrity: sha512-i0NV/CrSkFTaiOQs9AGy3tq0dkSjtTd4d7DfsjeDVZAA4aIHInwfFEmriNYGGJUfZ5x6IAC/QddoUpUJjQAi0w==}
+  pg-cloudflare@1.4.0:
+    resolution: {integrity: sha512-Vo7z/6rrQYxpNRylp4Tlob2elzbh+N/MOQbxFVWCxS7oEx6jF53GTJFxK2WWpKuBRkmiin4Mt+xofFDjx09R0A==}
+
+  pg-connection-string@2.14.0:
+    resolution: {integrity: sha512-XwWDGcLRGCXAR8F/AM5bG7Q+A3Wm2s6QeEjlOKZLlH3UYcguiqCWKyWXVag5TLTIjR7oOJUY8kcADaZgWPyLeg==}
 
   pg-int8@1.0.1:
     resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
     engines: {node: '>=4.0.0'}
 
-  pg-pool@2.0.10:
-    resolution: {integrity: sha512-qdwzY92bHf3nwzIUcj+zJ0Qo5lpG/YxchahxIN8+ZVmXqkahKXsnl2aiJPHLYN9o5mB/leG+Xh6XKxtP7e0sjg==}
+  pg-pool@3.14.0:
+    resolution: {integrity: sha512-gKtPkFdQPU3DksooVLi9LsjZxrsBUZIpa+7aVx+LV5pNh0KzP4Zleud2po+ConrxbuXGBJ6Hfer6hdgpIBpBaw==}
     peerDependencies:
-      pg: '>5.0'
+      pg: '>=8.0'
 
   pg-protocol@1.16.0:
     resolution: {integrity: sha512-sILXutLVjCLjcDuOmvhX5e2Z4cS5qG/6Bu3VkpFwdf/633ElGLpEh9bgmuI5I4sqKqkifQiGyiCcx1HdtrK7tg==}
-
-  pg-types@1.13.0:
-    resolution: {integrity: sha512-lfKli0Gkl/+za/+b6lzENajczwZHc7D5kiUCZfgm914jipD2kIOIvEkAhZ8GrW3/TUoP9w8FHjwpPObBye5KQQ==}
 
   pg-types@2.2.0:
     resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
     engines: {node: '>=4'}
 
-  pg@7.1.0:
-    resolution: {integrity: sha512-VuPajvJ3nNpu8PMkZ/uSuBptxVUQO7sxDJ8T1lzkzXGfeu8pSBxFBRTR2gqIEU0zbdXCfDRL8TZ4kIg9DNnoGg==}
-    engines: {node: '>= 4.5.0'}
+  pg@8.23.0:
+    resolution: {integrity: sha512-Ip2EQCngowJLGOfCwkFhPXU7/ljlhn6Rxlmy4XYfL2Y+vyRM59+8uR2xqRWKdYmbXmxCFOAmKxBuSUCdF34qLg==}
+    engines: {node: '>= 16.0.0'}
+    peerDependencies:
+      pg-native: '>=3.0.1'
+    peerDependenciesMeta:
+      pg-native:
+        optional: true
 
   pgpass@1.0.5:
     resolution: {integrity: sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==}
@@ -1860,10 +1859,6 @@ packages:
   postcss@8.5.28:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
-
-  postgres-array@1.0.3:
-    resolution: {integrity: sha512-5wClXrAP0+78mcsNX3/ithQ5exKvCyK5lr5NEEEeGwwM6NJdQgzIJBVxLvRW+huFpX92F2QnZ5CcokH0VhK2qQ==}
-    engines: {node: '>=0.10.0'}
 
   postgres-array@2.0.0:
     resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
@@ -1967,10 +1962,6 @@ packages:
 
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
-
-  semver@4.3.2:
-    resolution: {integrity: sha512-VyFUffiBx8hABJ9HYSTXLRwyZtdDHMzMtFmID1aiNAD2BZppBmJm0Hqw3p2jkgxP9BNt1pQ9RnC49P0EcXf6cA==}
-    hasBin: true
 
   semver@7.8.5:
     resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
@@ -2431,17 +2422,17 @@ snapshots:
 
   '@borewit/text-codec@0.2.2': {}
 
-  '@bull-board/api@9.8.0(@bull-board/ui@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0)))(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))':
+  '@bull-board/api@9.8.0(@bull-board/ui@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0)))(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))':
     dependencies:
-      '@bull-board/ui': 9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))
+      '@bull-board/ui': 9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))
       redis-info: 3.1.0
     optionalDependencies:
-      bullmq: 6.3.4(ioredis@6.0.0)(pg@7.1.0)
+      bullmq: 6.3.4(ioredis@6.0.0)(pg@8.23.0)
 
-  '@bull-board/express@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))':
+  '@bull-board/express@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))':
     dependencies:
-      '@bull-board/api': 9.8.0(@bull-board/ui@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0)))(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))
-      '@bull-board/ui': 9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))
+      '@bull-board/api': 9.8.0(@bull-board/ui@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0)))(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))
+      '@bull-board/ui': 9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))
       ejs: 6.0.1
       express: 5.2.1
     transitivePeerDependencies:
@@ -2449,9 +2440,9 @@ snapshots:
       - bullmq
       - supports-color
 
-  '@bull-board/ui@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))':
+  '@bull-board/ui@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))':
     dependencies:
-      '@bull-board/api': 9.8.0(@bull-board/ui@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0)))(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))
+      '@bull-board/api': 9.8.0(@bull-board/ui@9.8.0(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0)))(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))
     transitivePeerDependencies:
       - bull
       - bullmq
@@ -2710,12 +2701,12 @@ snapshots:
       '@nestjs/core': 12.0.1(@nestjs/common@12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@12.0.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       tslib: 2.8.1
 
-  '@nestjs/bullmq@12.0.0(@nestjs/common@12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.1)(bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0))':
+  '@nestjs/bullmq@12.0.0(@nestjs/common@12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.1)(bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0))':
     dependencies:
       '@nestjs/bull-shared': 12.0.0(@nestjs/common@12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.1)
       '@nestjs/common': 12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core': 12.0.1(@nestjs/common@12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@12.0.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      bullmq: 6.3.4(ioredis@6.0.0)(pg@7.1.0)
+      bullmq: 6.3.4(ioredis@6.0.0)(pg@8.23.0)
       tslib: 2.8.1
 
   '@nestjs/cli@12.0.0(@types/node@24.13.3)(prettier@3.9.6)':
@@ -3139,9 +3130,7 @@ snapshots:
 
   buffer-from@1.1.2: {}
 
-  buffer-writer@1.0.1: {}
-
-  bullmq@6.3.4(ioredis@6.0.0)(pg@7.1.0):
+  bullmq@6.3.4(ioredis@6.0.0)(pg@8.23.0):
     dependencies:
       cron-parser: 5.10.0
       msgpackr: 2.1.0
@@ -3150,7 +3139,7 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       ioredis: 6.0.0
-      pg: 7.1.0
+      pg: 8.23.0
 
   busboy@1.6.0:
     dependencies:
@@ -3811,8 +3800,6 @@ snapshots:
       '@oxlint/binding-win32-ia32-msvc': 1.81.0
       '@oxlint/binding-win32-x64-msvc': 1.81.0
 
-  packet-reader@0.3.1: {}
-
   parseurl@1.3.3: {}
 
   path-key@3.1.1: {}
@@ -3821,23 +3808,18 @@ snapshots:
 
   pathe@2.0.3: {}
 
-  pg-connection-string@0.1.3: {}
+  pg-cloudflare@1.4.0:
+    optional: true
+
+  pg-connection-string@2.14.0: {}
 
   pg-int8@1.0.1: {}
 
-  pg-pool@2.0.10(pg@7.1.0):
+  pg-pool@3.14.0(pg@8.23.0):
     dependencies:
-      pg: 7.1.0
+      pg: 8.23.0
 
   pg-protocol@1.16.0: {}
-
-  pg-types@1.13.0:
-    dependencies:
-      pg-int8: 1.0.1
-      postgres-array: 1.0.3
-      postgres-bytea: 1.0.1
-      postgres-date: 1.0.7
-      postgres-interval: 1.2.0
 
   pg-types@2.2.0:
     dependencies:
@@ -3847,15 +3829,15 @@ snapshots:
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
 
-  pg@7.1.0:
+  pg@8.23.0:
     dependencies:
-      buffer-writer: 1.0.1
-      packet-reader: 0.3.1
-      pg-connection-string: 0.1.3
-      pg-pool: 2.0.10(pg@7.1.0)
-      pg-types: 1.13.0
+      pg-connection-string: 2.14.0
+      pg-pool: 3.14.0(pg@8.23.0)
+      pg-protocol: 1.16.0
+      pg-types: 2.2.0
       pgpass: 1.0.5
-      semver: 4.3.2
+    optionalDependencies:
+      pg-cloudflare: 1.4.0
 
   pgpass@1.0.5:
     dependencies:
@@ -3901,8 +3883,6 @@ snapshots:
       nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
-
-  postgres-array@1.0.3: {}
 
   postgres-array@2.0.0: {}
 
@@ -4011,8 +3991,6 @@ snapshots:
   safe-stable-stringify@2.5.0: {}
 
   safer-buffer@2.1.2: {}
-
-  semver@4.3.2: {}
 
   semver@7.8.5: {}
 
@@ -4228,7 +4206,7 @@ snapshots:
 
   typedarray@0.0.6: {}
 
-  typeorm@1.1.1(ioredis@6.0.0)(pg@7.1.0):
+  typeorm@1.1.1(ioredis@6.0.0)(pg@8.23.0):
     dependencies:
       '@sqltools/formatter': 1.2.5
       ansis: 4.3.1
@@ -4242,7 +4220,7 @@ snapshots:
       yargs: 18.1.0
     optionalDependencies:
       ioredis: 6.0.0
-      pg: 7.1.0
+      pg: 8.23.0
     transitivePeerDependencies:
       - babel-plugin-macros
       - supports-color
