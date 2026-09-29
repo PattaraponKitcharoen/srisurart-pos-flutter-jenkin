@@ -24,10 +24,7 @@ WORKDIR /app
 # manager, and it vendors npm. Nothing at runtime needs any of it: CMD and every compose
 # `command:` are `node dist/…` and the health check uses wget; corepack lives in `deps`.
 # Must run before USER node — these files are root-owned.
-RUN apk upgrade --no-cache \
- && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
-           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
- && mkdir -p /app/exports && chown node:node /app/exports
+RUN mkdir -p /app/exports && chown node:node /app/exports
 # /app/exports: mount point of the `exports` volume (tenant export files, EXPORT_DIR). Created
 # here, owned by node, so Docker seeds a fresh named volume with that ownership.
 USER node
