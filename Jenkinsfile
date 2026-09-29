@@ -70,10 +70,12 @@ pipeline {
                         stage('Secrets') {
                             steps {
                                 script { env.CURRENT_STAGE = env.STAGE_NAME }
-                                // Full history: a secret committed and later deleted is still caught.
+                                // Full history of the commit being built: a secret committed and later
+                                // deleted is still caught. --log-opts=HEAD, because this checkout also
+                                // fetches every other branch and gitleaks' default is `git log --all`.
                                 // Reviewed false positives are allowlisted, with reasons, in .gitleaks.toml.
                                 container('gitleaks') {
-                                    sh 'gitleaks git --config .gitleaks.toml --redact --no-banner --report-format json --report-path reports/security/gitleaks-report.json .'
+                                    sh 'gitleaks git --log-opts=HEAD --config .gitleaks.toml --redact --no-banner --report-format json --report-path reports/security/gitleaks-report.json .'
                                 }
                             }
                         }
