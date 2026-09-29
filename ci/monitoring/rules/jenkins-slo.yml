@@ -1,0 +1,46 @@
+# Lab 09 — the pipeline's own SLI/SLO.
+#
+# SLO: 95% of builds finish in under 6 minutes, over a rolling 7 days.
+#   "95% of builds < 6 min" is the same statement as "p95 build time < 360 s", so the SLI
+#   is the p95 of jenkins.job.building.duration (Metrics plugin timer, seconds). The plugin
+#   exports no histogram buckets, so the 7-day view is the 7-day average of that p95 — an
+#   approximation that is stated here rather than hidden.
+#
+# Alerts are on SYMPTOMS the users of the build farm feel (work waiting, builds slow),
+# never on raw causes such as CPU or pod count.
+groups:
+  - name: jenkins-slo
+    rules:
+      - record: jenkins:build_duration_seconds:p95
+        expr: max(jenkins_job_building_duration{quantile="0.95"})
+
+      - record: jenkins:build_success_ratio:1h
+        expr: >
+          sum(increase(jenkins_runs_success_total[1h]))
+          / clamp_min(sum(increase(jenkins_runs_total_total[1h])), 1)
+
+      # Queue wait > 2 minutes, sustained for 5 minutes: at least one item has been ready
+      # to run (buildable = waiting only for an executor/pod) at EVERY scrape of the last
+      # 2 minutes, and that has stayed true for 5 minutes. A brief queue while a pod starts
+      # (~20 s) never qualifies; a capacity shortfall does.
+      - alert: JenkinsQueueBacklog
+        expr: >
+          jenkins_queue_size_value > 0
+          and min_over_time(jenkins_queue_buildable_value[2m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Jenkins build queue backlog exceeds 2 minutes"
+          description: >
+            {{ $value }} item(s) have waited for an executor for over 2 minutes, for 5
+            minutes straight: the build farm lacks capacity (check the Kubernetes
+            cloud's concurrency limit).
+
+      - alert: JenkinsBuildLatencySLOBurn
+        expr: avg_over_time(jenkins:build_duration_seconds:p95[7d]) > 360
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "Pipeline SLO at risk: p95 build time over 6 minutes (7-day window)"

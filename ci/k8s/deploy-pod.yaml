@@ -1,0 +1,21 @@
+# Lab 10 — the deploy pod: kubectl + node (ci/tools/deploy-tools.Dockerfile). Only main
+# gets one; the kubeconfig arrives through withCredentials, never through this spec.
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: srisurart-deploy
+spec:
+  securityContext:
+    fsGroup: 1000
+  containers:
+    - name: jnlp
+      resources:
+        requests: {cpu: 100m, memory: 256Mi}
+        limits: {memory: 768Mi}
+    - name: deploy
+      image: localhost:5001/ci-deploy-tools:1
+      command: [cat]
+      tty: true
+      securityContext: {runAsUser: 1000, runAsGroup: 1000}
+      env: [{name: HOME, value: /tmp}]

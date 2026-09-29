@@ -1,0 +1,59 @@
+# Lab 09 — monitoring for the build farm itself (Jenkins), kept apart from the POS
+# server's own Prometheus/Grafana in deploy/ so neither dashboard can clobber the other.
+#
+#   docker compose -p jenkins-monitoring --env-file <path outside the repo> -f ci/monitoring/docker-compose.yml up -d
+#
+# The env file holds only GRAFANA_ADMIN_PASSWORD. Every UI listens on loopback only.
+services:
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=8d   # the SLO window is 7 days
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    ports:
+      - 127.0.0.1:9091:9090
+    networks:
+      jenkins: {}
+      kind:                   # Lab 10: build pods query it for the Pipeline Health Gate
+        aliases: [prometheus]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:13.2.3
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - 127.0.0.1:3300:3000
+    networks: [jenkins]
+    depends_on: [prometheus]
+    restart: unless-stopped
+
+  # Lab 10: SMTP catcher for the pipeline's success/failure e-mails. Jenkins sends to
+  # mailpit:1025; nothing leaves this machine. Inbox UI on http://127.0.0.1:8025.
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    ports:
+      - 127.0.0.1:8025:8025
+    networks: [jenkins]
+    restart: unless-stopped
+
+networks:
+  jenkins:
+    external: true   # the network the jenkins controller is on
+  kind:
+    external: true   # the kind cluster's network (build pods)
+
+volumes:
+  prometheus-data:
+  grafana-data:
